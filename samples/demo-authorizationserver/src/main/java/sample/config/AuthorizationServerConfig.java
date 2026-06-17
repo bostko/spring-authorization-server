@@ -15,6 +15,7 @@
  */
 package sample.config;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -173,24 +174,27 @@ public class AuthorizationServerConfig {
 				.scope("message.write")
 				.build();
 
-		RegisteredClient mtlsDemoClient = RegisteredClient.withId(UUID.randomUUID().toString())
-				.clientId("mtls-demo-client")
-				.clientAuthenticationMethod(ClientAuthenticationMethod.TLS_CLIENT_AUTH)
-				.clientAuthenticationMethod(ClientAuthenticationMethod.SELF_SIGNED_TLS_CLIENT_AUTH)
-				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+
+		RegisteredClient flutterClient = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("flutter-client")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+				.redirectUri("http://127.0.0.1:7777/callback")
+				.scope(OidcScopes.OPENID)
+				.scope(OidcScopes.PROFILE)
+				.scope("offline_access")
 				.scope("message.read")
 				.scope("message.write")
-				.clientSettings(
-						ClientSettings.builder()
-								.x509CertificateSubjectDN("CN=demo-client-sample,OU=Spring Samples,O=Spring,C=US")
-								.jwkSetUrl("http://127.0.0.1:8080/jwks")
-								.build()
-				)
-				.tokenSettings(
-						TokenSettings.builder()
-								.x509CertificateBoundAccessTokens(true)
-								.build()
-				)
+				.clientSettings(ClientSettings.builder()
+						.requireAuthorizationConsent(false)
+						.requireProofKey(true)
+						.build())
+				.tokenSettings(TokenSettings.builder()
+						.accessTokenTimeToLive(Duration.ofMinutes(15))
+						.refreshTokenTimeToLive(Duration.ofDays(60))
+						.reuseRefreshTokens(false)
+						.build())
 				.build();
 
 		// Save registered client's in db as if in-memory
@@ -198,7 +202,7 @@ public class AuthorizationServerConfig {
 		registeredClientRepository.save(messagingClient);
 		registeredClientRepository.save(deviceClient);
 		registeredClientRepository.save(tokenExchangeClient);
-		registeredClientRepository.save(mtlsDemoClient);
+		registeredClientRepository.save(flutterClient);
 
 		return registeredClientRepository;
 	}

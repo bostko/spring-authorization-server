@@ -1,0 +1,44 @@
+<pre><font color="#FFFFFF">●</font> <b>What</b> <b>is</b> <b>a</b> <b>Public</b> <b>Client?</b>
+
+  A <b>public</b> <b>client</b> (RFC 6749 §2.1) is an OAuth2 client that <b>cannot</b> <b>keep</b> <b>a</b> <b>secret</b> — typically:
+  - Single-Page Applications (SPAs) running in the browser
+  - Native/mobile apps
+
+  It authenticates with <font color="#B1B9F9">client_authentication_method</font> <font color="#B1B9F9">=</font> <font color="#B1B9F9">none</font>, meaning no <font color="#B1B9F9">client_secret</font> is sent. PKCE is used
+   instead to prove identity.
+
+  A <b>confidential</b> <b>client</b> (server-side web app, backend service) can store a <font color="#B1B9F9">client_secret</font> securely.
+
+  ---
+  <b>Why</b> <b>does</b> <b>Spring</b> <b>block</b> <b>refresh</b> <b>tokens</b> <b>for</b> <b>public</b> <b>clients</b> <b>by</b> <b>default?</b>
+
+  The concern is token theft: if a <font color="#B1B9F9">refresh_token</font> is stolen from a public client&apos;s storage (e.g.,
+  <font color="#B1B9F9">localStorage</font>), the attacker can silently get new access tokens indefinitely. Confidential clients can
+  rotate secrets; public clients cannot.
+
+  ---
+  <b>Possible</b> <b>fixes</b> <b>/</b> <b>approaches</b>
+
+  ┌───────────────────┬─────────────────────────────────────────────────────────┬──────────────────────┐
+  │     Approach      │                           How                           │      Trade-off       │
+  ├───────────────────┼─────────────────────────────────────────────────────────┼──────────────────────┤
+  │ <b>Check</b>             │                                                         │ Follows OIDC         │
+  │ <font color="#B1B9F9"><b>offline_access</b></font><b> </b>   <b>│</b> <b>Only</b> <b>issue</b> <b>refresh</b> <b>token</b> <b>if</b> <b>scope</b> <b>includes</b>              <b>│</b> <b>standard;</b> <b>client</b>     <b>│</b>
+  <b>│</b> <b>scope</b>             │ <font color="#B1B9F9">offline_access</font>                                          │ must explicitly      │
+  │                   │                                                         │ request it           │
+  ├───────────────────┼─────────────────────────────────────────────────────────┼──────────────────────┤
+  │ <b>Check</b> <b>a</b> <b>client</b>    │ Add a flag like                                         │ Most flexible;       │
+  │ <b>setting</b>           │ <font color="#B1B9F9">tokenSettings.isRefreshTokenGrantedForPublicClient()</font>    │ opt-in per client    │
+  ├───────────────────┼─────────────────────────────────────────────────────────┼──────────────────────┤
+  │ <b>Remove</b> <b>the</b>        │ Delete the <font color="#B1B9F9">isPublicClientForAuthorizationCodeGrant</font>      │ Simple, but removes  │
+  │ <b>restriction</b>       │ check                                                   │ the safety default   │
+  │ <b>entirely</b>          │                                                         │                      │
+  ├───────────────────┼─────────────────────────────────────────────────────────┼──────────────────────┤
+  │ <b>Require</b> <b>refresh</b>   │ Issue refresh token but enforce <font color="#B1B9F9">reuseRefreshTokens</font> <font color="#B1B9F9">=</font>    <font color="#B1B9F9">│</font> <font color="#B1B9F9">Mitigates</font> <font color="#B1B9F9">theft</font> <font color="#B1B9F9">risk</font> <font color="#B1B9F9">│</font>
+  <font color="#B1B9F9">│</font> <font color="#B1B9F9"><b>token</b></font> <font color="#B1B9F9"><b>rotation</b></font><font color="#B1B9F9"> </font>   <font color="#B1B9F9">│</font> <font color="#B1B9F9">false</font>                                                   │  via one-time-use    │
+  │                   │                                                         │ tokens               │
+  └───────────────────┴─────────────────────────────────────────────────────────┴──────────────────────┘
+
+  The most standards-aligned fix is <font color="#B1B9F9"><b>offline_access</b></font><b> scope</b> <b>+</b> <b>refresh</b> <b>token</b> <b>rotation</b> (<font color="#B1B9F9">reuseRefreshTokens</font> <font color="#B1B9F9">=</font>
+  <font color="#B1B9F9">false</font>), which is what OAuth 2.1 draft recommends for public clients.
+</pre>
